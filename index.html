@@ -1541,8 +1541,8 @@ function deleteNode(id) {
 }
 function deleteSelected() { if(selectedId) deleteNode(selectedId); }
 
-function clearAll() {
-  if(!confirm('Wyczyścić całe drzewko?')) return;
+function clearAll(skipConfirm = false) {
+  if(!skipConfirm && !confirm('Wyczyścić całe drzewko?')) return;
   Object.keys(nodes).forEach(id => document.getElementById(id)?.remove());
   Object.keys(zones).forEach(id => document.getElementById(id)?.remove());
   nodes = {}; paths = []; zones = {};
@@ -1671,7 +1671,7 @@ function loadFile(e) {
   e.target.value = '';
 }
 function loadData(data) {
-  clearAll();
+  clearAll(true);
   if(data.hero) {
     Object.assign(hero, data.hero);
     document.getElementById('hero-name-inp').value  = hero.name;
@@ -1701,14 +1701,31 @@ function loadData(data) {
 // ── hero init ──
 initHero();
 
-// ── starter example ──
-(function seed() {
+// ── check for demo mode and load data.json ──
+const params = new URLSearchParams(window.location.search);
+if(params.get('demo') === 'true') {
+  fetch('data.json')
+    .then(res => res.json())
+    .then(data => {
+      loadData(data);
+      showToast('✔ Demo załadowany z data.json!');
+    })
+    .catch(() => {
+      showToast('⚠ Nie udało się załadować data.json', 'var(--red)');
+      initDefaultSeed();
+    });
+} else {
+  initDefaultSeed();
+}
+
+function initDefaultSeed() {
+  // ── starter example ──
   const hx = hero.x + 80, hy = hero.y + 90; // hero center approx
   const n1 = createNode({x: hx - 40,  y: hy - 220, name:'AI_devs',         icon:'💚', desc:'AI_devs – zielone serduszko.'});
   const n2 = createNode({x: hx + 200, y: hy - 40,  name:'AI Product Heroes',icon:'🩵', desc:'AI Product Heroes – turkusowy.'});
   const n3 = createNode({x: hx - 280, y: hy - 40,  name:'10xDevs',          icon:'💜', desc:'10xDevs – fioletowe serduszko.'});
   addPath('hero', n1); addPath('hero', n2); addPath('hero', n3);
-})();
+}
 
 // ── center viewport on hero ──
 (function centerOnHero() {
