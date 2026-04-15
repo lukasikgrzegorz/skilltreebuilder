@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -315,7 +316,9 @@
       font-family: var(--body-font);
       color: var(--text);
       text-align: center;
-      word-break: break-all;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      white-space: pre-wrap;
       max-width: 82px;
       margin-top: 3px;
       pointer-events: none;
@@ -565,7 +568,7 @@
           <div class="icon-preview" id="icon-preview-btn" onclick="toggleIconPicker()" title="Zmień ikonę">⚔️</div>
           <div style="flex:1">
             <label>Nazwa</label>
-            <input id="sel-name" type="text" oninput="updateSelected('name',this.value)" />
+            <textarea id="sel-name" rows="2" style="resize:vertical;min-height:36px" oninput="updateSelected('name',this.value)"></textarea>
           </div>
         </div>
         <div id="icon-picker"></div>
@@ -1170,7 +1173,7 @@ function renderNode(id) {
   const ports = el.querySelectorAll('.port');
   const stars = node.level > 0 ? '★'.repeat(node.level) + '☆'.repeat(Math.max(0, node.maxLevel - node.level)) : '☆'.repeat(node.maxLevel);
   el.innerHTML = `<div class="node-icon">${node.icon}</div>
-                  <div class="node-name">${node.name}</div>
+                  <div class="node-name">${node.name.replace(/\n/g,'<br>')}</div>
                   <div class="node-cost" style="letter-spacing:1px;font-size:8px">${stars}</div>`;
   ports.forEach(p => el.appendChild(p));
 
@@ -1232,7 +1235,7 @@ function refreshInfoPanel() {
   document.getElementById('no-sel').style.display     = node ? 'none' : '';
   document.getElementById('sel-fields').style.display = node ? 'flex' : 'none';
   if(node) {
-    document.getElementById('sel-name').value  = node.name;
+    document.getElementById('sel-name').value = node.name;
     document.getElementById('sel-desc').value  = node.desc;
     document.getElementById('icon-preview-btn').textContent = node.icon;
     iconPicker.classList.remove('open');
@@ -1416,10 +1419,6 @@ function openCtxZoneMenu(id, e) {
 // ════════════════════════════════════════════════════════
 function addPath(from, to) {
   if(from === to) return;
-  if(from === 'hero' || to === 'hero') {
-    const cnt = paths.filter(p => p.from==='hero' || p.to==='hero').length;
-    if(cnt >= 6) { flashMsg('Max 6 ścieżek od bohatera!'); return; }
-  }
   if(paths.find(p => (p.from===from&&p.to===to)||(p.from===to&&p.to===from))) return;
   paths.push({ id: 'path'+(++pathCounter), from, to });
   renderPaths();
@@ -1701,22 +1700,23 @@ function loadData(data) {
 // ── hero init ──
 initHero();
 
-// ── check for demo mode and load data.json ──
+// ── check for demo param or load data.json by default ──
 const params = new URLSearchParams(window.location.search);
-if(params.get('demo') === 'true') {
-  fetch('data.json')
-    .then(res => res.json())
-    .then(data => {
-      loadData(data);
-      showToast('✔ Demo załadowany z data.json!');
-    })
-    .catch(() => {
-      showToast('⚠ Nie udało się załadować data.json', 'var(--red)');
-      initDefaultSeed();
-    });
-} else {
-  initDefaultSeed();
-}
+const demoParam = params.get('demo');
+const jsonFile = demoParam ? demoParam + '.json' : 'data.json';
+
+fetch(jsonFile)
+  .then(res => { if(!res.ok) throw new Error(); return res.json(); })
+  .then(data => {
+    loadData(data);
+    centerOnHero();
+    showToast('✔ Wczytano ' + jsonFile);
+  })
+  .catch(() => {
+    if(demoParam) showToast('⚠ Nie udało się załadować ' + jsonFile, 'var(--red)');
+    initDefaultSeed();
+    centerOnHero();
+  });
 
 function initDefaultSeed() {
   // ── starter example ──
@@ -1727,14 +1727,15 @@ function initDefaultSeed() {
   addPath('hero', n1); addPath('hero', n2); addPath('hero', n3);
 }
 
-// ── center viewport on hero ──
-(function centerOnHero() {
+function centerOnHero() {
   const vw = canvasWrap.clientWidth;
   const vh = canvasWrap.clientHeight;
   panX = vw / 2 - (hero.x + 80);
-  panY = vh / 2 - (hero.y + 90);
+  panY = vh * 0.78 - (hero.y + 90);
   applyTransform();
-})();
+}
+
+centerOnHero();
 </script>
 </body>
 </html>
